@@ -1,5 +1,7 @@
 #!/usr/bin/python
 #coding:utf8
+#Author=Cheung Kei-Chuen
+#QQ 741345015
 VERSION=86
 import os,sys
 BUILD_CMD=['exit','flush logs']
