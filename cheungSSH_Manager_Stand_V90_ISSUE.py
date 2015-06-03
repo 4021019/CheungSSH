@@ -2,7 +2,7 @@
 #coding:utf8
 #Author=Cheung Kei-Chuen
 #QQ 741345015
-VERSION=86
+VERSION=90
 import os,sys
 BUILD_CMD=['exit','flush logs']
 os.sys.path.insert(0,os.path.abspath('./'))
@@ -14,12 +14,18 @@ except Exception,e:
 	sys.exit(1)
 LogFile='/cheung/logs/auto_ssh.log'
 DeploymentFlag="/tmp/DeploymentFlag%s" % (str(random.randint(999999999,999999999999)))
-KEYDAY=30
 try:
 	paramiko.util.log_to_file('/cheung/logs/paramiko.log')
 except Exception,e:
 	pass
-os.system('stty erase ^H 2>/dev/null')
+os.system('stty erase ^H')
+T_V=sys.version.split()[0]
+if int(T_V.replace(".","")) <240:
+	print "Python's version can not less than 2.4"
+	print "Please : yum  update  -y  python"
+	sys.exit(1)
+
+
 def Write_Log(ip,stderr,stdout,Logcmd,LogFile,useroot,username,UseLocalScript,Deployment,DeploymentStatus):
 	if DeploymentStatus:
 		DeploymentStatus='Y'
@@ -58,7 +64,9 @@ def InitInstall():
 			sys.exit(1)
 	if not os.path.isfile('/cheung/conf/cheung.conf'):
 		T=open('/cheung/conf/cheung.conf','w')
-		T.write("""[AUTO_SSH]
+		T.write("""[CheungSSH]
+#Author=Cheung Kei-Chuen
+#QQ=741345015
 Servers=localhost,127.0.0.1,www.baidu.com
 Username=YourServerCount
 Password=Yourcount-Password
@@ -172,23 +180,23 @@ def Read_config(file="/cheung/conf/cheung.conf"):
 		print "The %s format Error.\a\n\t%s" % (file,e)
 		sys.exit(1)
 	try:
-		Servers=c.get("AUTO_SSH","Servers")
+		Servers=c.get("CheungSSH","Servers")
 	except Exception,e:
 		print "No Servers"
 		sys.exit()
 	try:
-		UseKey=c.get("AUTO_SSH","UseKey").lower()
+		UseKey=c.get("CheungSSH","UseKey").lower()
 	except Exception,e:
 		UseKey='n'
 	
 	if UseKey=='n':
 		try:
-			Password=c.get("AUTO_SSH","Password")
+			Password=c.get("CheungSSH","Password")
 		except Exception,e:
 			print "No Password"
 			sys.exit()
 		try:
-			Username=c.get("AUTO_SSH","Username")
+			Username=c.get("CheungSSH","Username")
 		except Exception,e:
 			print "No Username"
 			sys.exit()
@@ -196,30 +204,30 @@ def Read_config(file="/cheung/conf/cheung.conf"):
 		Password=None
 		Username=getpass.getuser()
 	try:
-		Port=int(c.get("AUTO_SSH","Port"))
+		Port=int(c.get("CheungSSH","Port"))
 	except Exception,e:
 		Port=22
 		print "No Port default 22"
 	try:
-		RunMode=c.get("AUTO_SSH","RunMode").upper()
+		RunMode=c.get("CheungSSH","RunMode").upper()
 	except Exception,e:
 		RunMode='M'
 		print "No Runmode default Mutiple(M)"
 	try:
-		Deployment=c.get("AUTO_SSH","Deployment").lower()
+		Deployment=c.get("CheungSSH","Deployment").lower()
 		if Deployment=='y':
 			try:
-				ListenFile=c.get("AUTO_SSH","ListenFile")
+				ListenFile=c.get("CheungSSH","ListenFile")
 			except Exception,e:
 				print "In deployment mode ,must be specify ListenFile"
 				sys.exit(1)
 			try:
-				ListenTime=int(c.get("AUTO_SSH","ListenTime"))
+				ListenTime=int(c.get("CheungSSH","ListenTime"))
 			except Exception,e:
 				print  "Warning : ListenTime default is 60"
 				ListenTime=60
 			try:
-				ListenChar=c.get("AUTO_SSH","ListenChar")
+				ListenChar=c.get("CheungSSH","ListenChar")
 			except Exception,e:
 				print "In deployment mode ,must be specify ListenChar"
 				sys.exit(1)
@@ -231,14 +239,14 @@ def Read_config(file="/cheung/conf/cheung.conf"):
 			
 		
 	try:
-		Useroot=c.get("AUTO_SSH","Useroot").lower()
+		Useroot=c.get("CheungSSH","Useroot").lower()
 		if Useroot=='y' and Deployment=='y':
 			print "In Deployment no support su  - root "
 			sys.exit(1)
 	except Exception,e:
 		Useroot="n"
 	try:
-		Timeout=c.get("AUTO_SSH","Timeout")
+		Timeout=c.get("CheungSSH","Timeout")
 		try:
 			Timeout=socket.setdefaulttimeout(int(Timeout))
 		except Exception,e:
@@ -249,7 +257,7 @@ def Read_config(file="/cheung/conf/cheung.conf"):
 
 	if Useroot == "y":
 		try:
-			Passwordroot=c.get("AUTO_SSH","Passwordroot")
+			Passwordroot=c.get("CheungSSH","Passwordroot")
 		except Exception,e:
 			print "Need root's Password"
 			sys.exit(1)
@@ -258,17 +266,17 @@ def Read_config(file="/cheung/conf/cheung.conf"):
 	All_port={}
 	for t_server in Servers.split(","):
 		try:
-			t=c.get("AUTO_SSH","%s_Password" % (t_server))
+			t=c.get("CheungSSH","%s_Password" % (t_server))
 			All_pass["%s_Password" % (t_server)]=t
 		except Exception,e:
 			pass
 		try:
-			t=c.get("AUTO_SSH","%s_Username" % (t_server))
+			t=c.get("CheungSSH","%s_Username" % (t_server))
 			All_user["%s_Username" % (t_server)]=t
 		except:
 			pass
 		try:
-			t=c.get("AUTO_SSH","%s_Port" % (t_server))
+			t=c.get("CheungSSH","%s_Port" % (t_server))
 			All_pass["%s_Port" % (t_server)]=t
 		except:
 			pass
