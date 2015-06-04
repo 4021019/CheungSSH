@@ -2,7 +2,7 @@
 #coding:utf8
 #Author=Cheung Kei-Chuen
 #QQ 741345015
-VERSION=90
+VERSION=92
 import os,sys
 BUILD_CMD=['exit','flush logs']
 os.sys.path.insert(0,os.path.abspath('./'))
@@ -12,7 +12,7 @@ try:
 except Exception,e:
 	print "\033[1m\033[1;31m-ERR %s\033[0m\a"	% (e)
 	sys.exit(1)
-LogFile='/cheung/logs/auto_ssh.log'
+LogFile='/cheung/logs/cheungssh.log'
 DeploymentFlag="/tmp/DeploymentFlag%s" % (str(random.randint(999999999,999999999999)))
 try:
 	paramiko.util.log_to_file('/cheung/logs/paramiko.log')
@@ -89,7 +89,7 @@ Port=22""")
 
 
 def SSH_cmd(ip,username,password,port,cmd,UseLocalScript):
-	
+	PATH="export PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin;"
 	global All_Servers_num,All_Servers_num_all,All_Servers_num_Succ,Done_Status,Global_start_time
 	start_time=time.time()
 	ResultSum=''
@@ -112,9 +112,9 @@ def SSH_cmd(ip,username,password,port,cmd,UseLocalScript):
 			ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 			ssh.connect(ip,port,username,password)
 		if Deployment=='y':
-			stdin,stdout,stderr=ssh.exec_command(ListenLog+cmd)
+			stdin,stdout,stderr=ssh.exec_command(PATH+ListenLog+cmd)
 		else:
-			stdin,stdout,stderr=ssh.exec_command(cmd)
+			stdin,stdout,stderr=ssh.exec_command(PATH+cmd)
 		out=stdout.readlines()
 		All_Servers_num += 1
 		print "\r"
@@ -603,7 +603,7 @@ def Excute_cmd():
 		if re.search('^ *[Ff][Ll][Uu][Ss][Hh] *[Ll][Oo][Gg][Ss] *$',cmd):
 			try:
 				Log_Flag=time.strftime('%Y%m%d%H%M%S',time.localtime())
-				shutil.move('/cheung/logs/auto_ssh.log','/cheung/logs/auto_ssh%s.log' % Log_Flag)
+				shutil.move('/cheung/logs/cheungssh.log','/cheung/logs/cheungssh%s.log' % Log_Flag)
 				print "+OK"
 				continue
 			except Exception,e:
