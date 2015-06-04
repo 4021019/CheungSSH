@@ -3,6 +3,11 @@
 #QQ=741345015
 #如果您在使用过程中，遇到了一点点的问题，我都真诚希望您能告诉我！为了改善这个软件， 方便您的工作！
 export LANG=zh_CN.UTF-8
+if [ `id -u` -ne 0 ]
+then
+	echo "Must be as root install!"
+	exit 1
+fi
 echo  "Installing..."
 rpm  -qa|grep gcc -q
 if  [ $? -ne 0 ]
@@ -33,41 +38,51 @@ then
 	fi
 fi
 
-wget --no-check-certificate https://pypi.python.org/packages/source/p/pycrypto/pycrypto-2.6.1.tar.gz
-if [ $? -ne  0 ]
+
+
+
+which pip 2>/dev/null
+if [ $? -ne 0 ]
 then
-	echo "下载 https://pypi.python.org/packages/source/p/pycrypto/pycrypto-2.6.1.tar.gz 失败，请您使用浏览器下载安装"
-	exit 1
-else
-	tar xf pycrypto-2.6.1.tar.gz;cd pycrypto-2.6.1;python setup.py install  2>/dev/null  >/null
-	if  [ $? -ne  0 ]
+	easy_install pip
+	if [ $? -ne 0 ]
 	then
-		echo  "安装pycrypto-2.6.1.tar.gz失败，请您解压这个压缩包后，手动安装"
+		echo "安装pip失败，请手动安装pip"
 		exit 1
 	else
-		echo  "安装pycrypto成功！"
+		echo "安装pip成功"
 	fi
 fi
 
-
-
-
-wget   --no-check-certificate  https://pypi.python.org/packages/source/p/paramiko/paramiko-1.9.0.tar.gz
-if [ $? -ne  0 ]
+pip install  pycrypto
+if [ $? -ne 0 ]
 then
-	echo "下载https://pypi.python.org/packages/source/p/paramiko/paramiko-1.9.0.tar.gz 失败，请使用浏览器下载"
+	echo "安装pycrypto失败，请手动下载安装:https://pypi.python.org/packages/source/p/pycrypto/pycrypto-2.6.1.tar.gz"
 	exit 1
 else
-	tar xf paramiko-1.9.0.tar.gz;cd paramiko-1.9.0;python setup.py install  2>/dev/null  >/dev/null
-	if  [ $? -ne 0 ]
-	then
-		echo "安装paramiko-1.9.0.tar.gz失败，请您手动解压后安。"
-		exit 1
-	else
-		echo "安装paramiko成功"
-	fi
+	echo "安装pycrypto成功"
 fi
-cd ../../;rm -fr paramiko* pycrypto*
+
+pip install  paramiko
+if [ $? -ne 0 ]
+then
+	echo "安装paramiko失败，请手动下载后安装 https://pypi.python.org/packages/source/p/paramiko/paramiko-1.9.0.tar.gz"
+	exit 1
+else
+	echo "安装paramiko成功"
+fi
+#########
+chmod -R a+x CheungSSH*  2>/dev/null
+chmod a+x *.py 2>/dev/null
+cat <<EOF|python
+#encoding:utf-8
+try:
+ import paramiko
+except AttributeError:
+ import os
+ os.system("""sed  -i '/You should rebuild using libgmp/d;/HAVE_DECL_MPZ_POWM_SEC/d'  /usr/lib64/python*/site-packages/Crypto/Util/number.py       /usr/lib/python*/site-packages/pycrypto*/Crypto/Util/number.py""") #有的系统可能需要修改一下这个语句，否则会报错
+EOF
+
 echo "恭喜，您已经安装好了环境，接下来请您使用 ./`ls cheungSSH*` 启动程序"
 
 
