@@ -14,15 +14,20 @@ def Get_Char(Char,i):
 	return Max_Char_Len,New_Char
 	
 def Show_Line(Max_Char_Len,i=0,Flag='end'):
+	T=''
 	while i<=Max_Char_Len+2:
 		if i<=5 and Flag=='start':
-			sys.stdout.write('+')
+			#sys.stdout.write('+')
+			T+='+'
 			i+=1
 			continue
 		
-		sys.stdout.write('-')
+		#sys.stdout.write('-')
+		T+='-'
 		i+=1
+	return T
 def Show_Char(New_Char,Color_Status):
+	AllChar=''
 	if Color_Status==0:
 		Color_Start="\033[1;32m"
 		Color_End="\033[0m"
@@ -30,16 +35,15 @@ def Show_Char(New_Char,Color_Status):
 		Color_Start="\033[1;31m"
 		Color_End="\033[0m"
 	New_Char=New_Char
-	print '\n\n'
+	AllChar+='\n\n'
 	Len_and_Char=Get_Char(New_Char,i=0)
-	print Color_Start
-	Show_Line(Len_and_Char[0],i=0,Flag='start')
-	print
+	AllChar+=Color_Start
+	AllChar+=Show_Line(Len_and_Char[0],i=0,Flag='start') + '\n'
 	for t in Len_and_Char[1]:
-		print t
-	Show_Line(Len_and_Char[0],i=0)
-	print Color_End
-	print
+		AllChar=AllChar + t + '\n'
+	AllChar+=Show_Line(Len_and_Char[0],i=0) +  Color_End +'\n'
+	#print AllChar
+	return AllChar
 
 if __name__=='__main__':
 	Show_Char(sys.argv[1],0)
