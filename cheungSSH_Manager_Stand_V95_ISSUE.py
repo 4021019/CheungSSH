@@ -2,13 +2,13 @@
 #coding:utf8
 #Author=Cheung Kei-Chuen
 #QQ 741345015
-VERSION=94
+VERSION=95
 import os,sys
 BUILD_CMD=['exit','flush logs']
 os.sys.path.insert(0,os.path.abspath('./'))
 os.sys.path.insert(0,os.path.abspath('/cheung/bin/'))
 try:
-	import paramiko,threading,socket,ConfigParser,time,commands,threading,re,getpass,Format_Char_Show,shutil,random,getpass,LogCollect
+	import paramiko,threading,socket,ConfigParser,time,commands,threading,re,getpass,Format_Char_Show,shutil,random,getpass,LogCollect,readline
 except Exception,e:
 	print "\033[1m\033[1;31m-ERR %s\033[0m\a"	% (e)
 	sys.exit(1)
@@ -20,7 +20,7 @@ try:
 	paramiko.util.log_to_file('/cheung/logs/paramiko.log')
 except Exception,e:
 	pass
-os.system('stty erase ^H')
+#os.system('stty erase ^H')
 T_V=sys.version.split()[0]
 if int(T_V.replace(".","")) <240:
 	print "Python's version can not less than 2.4"
@@ -618,7 +618,7 @@ def Excute_cmd():
 		except Exception,e:
 			PWD=''
 
-		if cmd == "exit":
+		if re.search("^ *[Ee][Xx][Ii][Tt] *",cmd):
 			sys.exit(0)
 		if re.search('^ *[Ff][Ll][Uu][Ss][Hh] *[Ll][Oo][Gg][Ss] *$',cmd):
 			try:
