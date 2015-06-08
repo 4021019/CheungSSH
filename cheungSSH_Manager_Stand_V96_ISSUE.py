@@ -2,23 +2,26 @@
 #coding:utf8
 #Author=Cheung Kei-Chuen
 #QQ 741345015
-VERSION=90
+VERSION=96
 import os,sys
 BUILD_CMD=['exit','flush logs']
 os.sys.path.insert(0,os.path.abspath('./'))
 os.sys.path.insert(0,os.path.abspath('/cheung/bin/'))
 try:
-	import paramiko,threading,socket,ConfigParser,time,commands,threading,re,getpass,Format_Char_Show,shutil,random,getpass,LogCollect
+	import paramiko,threading,socket,ConfigParser,time,commands,threading,re,getpass,Format_Char_Show,shutil,random,getpass,LogCollect,readline
 except Exception,e:
 	print "\033[1m\033[1;31m-ERR %s\033[0m\a"	% (e)
 	sys.exit(1)
-LogFile='/cheung/logs/auto_ssh.log'
+reload(sys)
+sys.setdefaultencoding('utf8')
+LogFile='/cheung/logs/cheungssh.log'
+SLogFile='/cheung/logs/cheungssh.source.log'
 DeploymentFlag="/tmp/DeploymentFlag%s" % (str(random.randint(999999999,999999999999)))
 try:
 	paramiko.util.log_to_file('/cheung/logs/paramiko.log')
 except Exception,e:
 	pass
-os.system('stty erase ^H')
+#os.system('stty erase ^H')
 T_V=sys.version.split()[0]
 if int(T_V.replace(".","")) <240:
 	print "Python's version can not less than 2.4"
@@ -39,6 +42,14 @@ def Write_Log(ip,stderr,stdout,Logcmd,LogFile,useroot,username,UseLocalScript,De
 		T.close()
 	except Exception,e:
 		print "Warning: Can't write log. (%s)" % e
+def WriteSourceLog(MSG):
+	try:
+		F=open(SLogFile,"a")
+		F.write(MSG)
+		F.close()
+	except Exception,e:
+		print "Can not write to log (%s)" % (e)
+	
 def LocalScriptUpload(ip,port,username,password,s_file,d_file):
 	try:		
 		t = paramiko.Transport((ip,port))
@@ -88,9 +99,9 @@ Port=22""")
 
 
 
-def SSH_cmd(ip,username,password,port,cmd,UseLocalScript):
-	
-	global All_Servers_num,All_Servers_num_all,All_Servers_num_Succ,Done_Status,Global_start_time
+def SSH_cmd(ip,username,password,port,cmd,UseLocalScript,OPTime):
+	PATH="export PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin;"
+	global All_Servers_num,All_Servers_num_all,All_Servers_num_Succ,Done_Status,Global_start_time,PWD
 	start_time=time.time()
 	ResultSum=''
 	ResultSumLog=''
@@ -112,9 +123,9 @@ def SSH_cmd(ip,username,password,port,cmd,UseLocalScript):
 			ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 			ssh.connect(ip,port,username,password)
 		if Deployment=='y':
-			stdin,stdout,stderr=ssh.exec_command(ListenLog+cmd)
+			stdin,stdout,stderr=ssh.exec_command(PWD+PATH+ListenLog+cmd)
 		else:
-			stdin,stdout,stderr=ssh.exec_command(cmd)
+			stdin,stdout,stderr=ssh.exec_command(PWD+PATH+cmd)
 		out=stdout.readlines()
 		All_Servers_num += 1
 		print "\r"
@@ -149,12 +160,18 @@ def SSH_cmd(ip,username,password,port,cmd,UseLocalScript):
 			Write_Log(ip,error_out,ResultSumLog.strip('\\n') + '\n',cmd,LogFile,'N',username,UseLocalScript,Deployment,DeploymentStatus)
 
 		Show_Result=ResultSum + '\n' +ResultSum_count
-		Format_Char_Show.Show_Char(Show_Result,0)  
+		TmpShow=Format_Char_Show.Show_Char(Show_Result+"Time:"+OPTime,0)  
+		WriteSourceLog(TmpShow)
+		print TmpShow
 	except Exception,e:
 		All_Servers_num += 1
 		ResultSum_count="\n\033[1m\033[1;31m-ERR %s %s (%0.2f Sec All %d Done %d)\033[1m\033[0m\a"	% (ip,e,float(time.time() - start_time),All_Servers_num_all,All_Servers_num)
 		Show_Result= ResultSum+ResultSum_count
-		Format_Char_Show.Show_Char(Show_Result,1)  
+
+                TmpShow=Format_Char_Show.Show_Char(Show_Result+"Time:"+OPTime,0)
+                WriteSourceLog(TmpShow)
+                print TmpShow
+		#Format_Char_Show.Show_Char(Show_Result+"Time:"+OPTime,1)  
 		Write_Log(ip,str(e),'NULL\n',cmd,LogFile,'N',username,UseLocalScript,Deployment,DeploymentStatus)
 	else:
 		ssh.close()
@@ -277,10 +294,10 @@ def Read_config(file="/cheung/conf/cheung.conf"):
 			pass
 		try:
 			t=c.get("CheungSSH","%s_Port" % (t_server))
-			All_pass["%s_Port" % (t_server)]=t
+			All_port["%s_Port" % (t_server)]=int(t)
 		except:
 			pass
-	print "Servers:%d|RunMode:%s|UseKey:%s|Deployment:%s  \n" % (len(Servers.split(',')),RunMode,UseKey,Deployment)
+	print "Servers:%d|RunMode:%s|UseKey:%s|Deployment:%s|Username:%s  \n" % (len(Servers.split(',')),RunMode,UseKey,Deployment,Username)
 
 
 def Upload_file(ip,port,username,password):
@@ -342,10 +359,7 @@ def Download_file_regex(ip,port,username,password):
 			if re.search(os.path.basename(s_file),getfilename):
 				download_fullpath=os.path.join(os.path.dirname(s_file),getfilename)
 				try:
-					if os.path.isfile(os.path.join(d_file,getfilename)):
-						ret=sftp.get(download_fullpath,"%s_%s" % (os.path.join(d_file,getfilename),ip))
-					else:
-						ret=sftp.get(download_fullpath,os.path.join(d_file,getfilename))
+					ret=sftp.get(download_fullpath,"%s_%s" % (os.path.join(d_file,getfilename),ip))
 					print  '\t\033[1m\033[1;32m+OK %s : %s' % (ip,download_fullpath)
 				except Exception,e:
 					print  '\t\033[1m\033[1;33m-Failed %s : %s %s' % (ip,download_fullpath,e)
@@ -502,7 +516,7 @@ def Main_p(Server,Port,Username,Password):
 	except EOFError:
 		print "exit"
 
-def Excute_cmd_root(s,Port,Username,Password,Passwordroot,cmd,UseLocalScript):
+def Excute_cmd_root(s,Port,Username,Password,Passwordroot,cmd,UseLocalScript,OPTime):
 	global All_Servers_num_all,All_Servers_num,All_Servers_num_Succ,Done_Status,bufflog
 	Done_Status='start'
 	bufflog=''
@@ -543,6 +557,7 @@ def Excute_cmd_root(s,Port,Username,Password,Passwordroot,cmd,UseLocalScript):
                 			All_Servers_num_Succ+=1
 					break
 		if Result_status:
+			ssh.send(PWD)
 			ssh.send("%s\n" % (cmd))
 			buff=""
 			bufflog=''
@@ -571,10 +586,16 @@ def Excute_cmd_root(s,Port,Username,Password,Passwordroot,cmd,UseLocalScript):
 		bufflog=str(e)
 	if Result_status:
 		Write_Log(s,'NULL',bufflog.strip('\\n') + '\n',cmd,LogFile,'Y',Username,UseLocalScript,'N','N')
-		Format_Char_Show.Show_Char(ResultSum,0)
+		TmpShow=Format_Char_Show.Show_Char(Show_Result+"Time:"+OPTime,0)
+		WriteSourceLog(TmpShow)
+		print TmpShow
+		#Format_Char_Show.Show_Char(ResultSum+"Time:"+OPTime,0)
 	else:
 		Write_Log(s,bufflog.strip('\\n'),'NULL\n',cmd,LogFile,'Y',Username,UseLocalScript,'N','N')
-		Format_Char_Show.Show_Char(ResultSum,1)
+		TmpShow=Format_Char_Show.Show_Char(Show_Result+"Time:"+OPTime,0)
+		WriteSourceLog(TmpShow)
+		print TmpShow
+		#Format_Char_Show.Show_Char(ResultSum+"Time:"+OPTime,1)
 	if All_Servers_num_all == All_Servers_num:
 		print "+Done (Succ:%d,Fail:%d, %0.2fSec GUN/Linux Cheung Kei-Chuen All Right Reserved)" % (All_Servers_num_Succ,All_Servers_num_all-All_Servers_num_Succ,time.time()-Global_start_time)
                 All_Servers_num =0
@@ -582,28 +603,52 @@ def Excute_cmd_root(s,Port,Username,Password,Passwordroot,cmd,UseLocalScript):
 		Done_Status='end'
 
 def Excute_cmd():
-	global All_Servers_num_all,All_Servers_num,All_Servers_num_Succ,Done_Status,Logcmd,ListenLog,Global_start_time
+	global All_Servers_num_all,All_Servers_num,All_Servers_num_Succ,Done_Status,Logcmd,ListenLog,Global_start_time,PWD
 	Done_Status='end'
 	All_Servers_num_all=len(Servers.split(','))
 	All_Servers_num    =0
 	All_Servers_num_Succ=0
 	UseLocalScript='N' #
+	PWD=''
+	IS_PWD=False
 	while True:
+		OPTime=time.strftime('%Y%m%d%H%M%S',time.localtime())
 		if Done_Status=='end':
 			if Useroot == "y":
-				cmd=raw_input("root CMD>>>>")
+				cmd=raw_input("CheungSSH root>>>>")
 			else:
-				cmd=raw_input("CMD>>>>")
+				cmd=raw_input("CheungSSH>>>>")
 				
 		else:
 			time.sleep(0.05)
 			continue
-		if cmd == "exit":
+
+		try:
+			if not IS_PWD:
+				PWD=re.search("^ *cd.*",cmd).group() +";"
+				Done_Status='end'
+				IS_PWD=True
+				continue
+			else:
+				try:
+					PWD=re.search("^ *cd.*",cmd).group() +";"
+					Done_Status='end'
+					IS_PWD=True
+					continue
+				except:
+					pass
+		except Exception,e:
+			PWD=''
+
+		if re.search("^ *[Ee][Xx][Ii][Tt] *",cmd):
 			sys.exit(0)
+		if re.search("^ *[Cc][Ll][Ee][Aa][Rr] *",cmd):
+			print "请使用ctrl + L 清屏"
+			continue
 		if re.search('^ *[Ff][Ll][Uu][Ss][Hh] *[Ll][Oo][Gg][Ss] *$',cmd):
 			try:
 				Log_Flag=time.strftime('%Y%m%d%H%M%S',time.localtime())
-				shutil.move('/cheung/logs/auto_ssh.log','/cheung/logs/auto_ssh%s.log' % Log_Flag)
+				shutil.move('/cheung/logs/cheungssh.log','/cheung/logs/cheungssh%s.log' % Log_Flag)
 				print "+OK"
 				continue
 			except Exception,e:
@@ -654,22 +699,22 @@ def Excute_cmd():
 			Done_Status='start'
 			if RunMode.upper()=='M':
 				if Useroot=='y':
-					a=threading.Thread(target=Excute_cmd_root,args=(s,Port,t_username,t_password,Passwordroot,Newcmd,UseLocalScript))
+					a=threading.Thread(target=Excute_cmd_root,args=(s,t_port,t_username,t_password,Passwordroot,Newcmd,UseLocalScript,OPTime))
 					a.start()
 				else:
 					
-					a=threading.Thread(target=SSH_cmd,args=(s,t_username,t_password,t_port,Newcmd,UseLocalScript))
+					a=threading.Thread(target=SSH_cmd,args=(s,t_username,t_password,t_port,Newcmd,UseLocalScript,OPTime))
 					a.start()
 					
 			else:
 				if Useroot=='y':
-					Excute_cmd_root(s,Port,t_username,t_password,Passwordroot,Newcmd,UseLocalScript)
+					Excute_cmd_root(s,Port,t_username,t_password,Passwordroot,Newcmd,UseLocalScript,OPTime)
 				else:
 					if Deployment=='y':
 						ListenLog="""if [ ! -r %s ] ; then echo -e '\033[1m\033[1;31m-ERR ListenFile %s  not exists,so do not excute commands !\033[1m\033[0m\a ' 1>&2 ;exit;else nohup tail -n 0 -f  %s  2&>%s &   fi;""" % (ListenFile,ListenFile,ListenFile,DeploymentFlag)
-						SSH_cmd(s,t_username,t_password,t_port,Newcmd,UseLocalScript)
+						SSH_cmd(s,t_username,t_password,t_port,Newcmd,UseLocalScript,OPTime)
 					else:
-						SSH_cmd(s,t_username,t_password,t_port,Newcmd,UseLocalScript)
+						SSH_cmd(s,t_username,t_password,t_port,Newcmd,UseLocalScript,OPTime)
 							
 			############################################################################################
 if  __name__=='__main__':
